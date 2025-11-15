@@ -1,117 +1,136 @@
-const style = document.createElement('style');
-style.textContent = 'body { visibility: hidden !important; }';
-document.documentElement.appendChild(style);
+const CSS_CLASSES = { BADGE: 'ip-masker-badge', REVEALED: 'ip-masker-revealed' };
+const ICONS = { SHIELD: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 5px; opacity: 0.7; vertical-align: text-bottom;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"></path></svg>` };
+const BADGE_STYLES = `display: inline-flex; align-items: center; background-color: #e9ecef; border: 1px solid #ced4da; border-radius: 4px; padding: 1px 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #495057; line-height: 1.5; white-space: nowrap; cursor: pointer; user-select: none;`;
 
-const ipRegex = /\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(:[0-9]{1,5})?\b/g;
-const MASK_CLASS_NAME = 'ip-masker-badge';
-const MASK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 5px; opacity: 0.7; vertical-align: text-bottom;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"></path></svg>`;
+const AppState = {
+    config: { enabled: true, maskLocal: true, whitelist: [], localIpPatterns: [], language: 'pl' },
+    isWhitelisted: false,
+    stats: { maskedCount: 0 },
+    UI_TEXT: { MASKED: "Zamaskowane IP" } // Domyślny tekst
+};
 
-function createMaskBadge(originalIP) {
-    const badge = document.createElement('span');
-    badge.className = MASK_CLASS_NAME;
-    badge.style.cssText = "display: inline-flex; align-items: center; background-color: #e9ecef; border: 1px solid #ced4da; border-radius: 4px; padding: 1px 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #495057; line-height: 1.5; white-space: nowrap;";
-    badge.dataset.originalIp = originalIP;
-    badge.innerHTML = `${MASK_SVG}Zamaskowane IP`;
-    return badge;
-}
-
-function maskTextNode(textNode) {
-    const parent = textNode.parentNode;
-    if (!parent || ['STYLE', 'SCRIPT', 'TEXTAREA', 'HEAD'].includes(parent.tagName) || parent.isContentEditable || parent.classList.contains(MASK_CLASS_NAME)) {
-        return false;
+const antiFlickerStyle = document.createElement('style');
+chrome.storage.sync.get(["enabled", "whitelist"], (data) => {
+    if ((data.enabled ?? true) && !Helpers.isUrlWhitelisted(window.location.href, data.whitelist ?? [])) {
+        antiFlickerStyle.textContent = 'body { visibility: hidden !important; }';
+        document.documentElement.appendChild(antiFlickerStyle);
     }
-    const txt = textNode.nodeValue;
-    ipRegex.lastIndex = 0;
-    if (!ipRegex.test(txt)) return false;
+});
 
-    const fragment = document.createDocumentFragment();
-    let lastIndex = 0, match, hasChanges = false;
-    ipRegex.lastIndex = 0;
-
-    while ((match = ipRegex.exec(txt)) !== null) {
-        hasChanges = true;
-        const textBefore = txt.substring(lastIndex, match.index);
-        if (textBefore) fragment.appendChild(document.createTextNode(textBefore));
-        
-        fragment.appendChild(createMaskBadge(match[0]));
-        lastIndex = ipRegex.lastIndex;
-    }
-
-    if (!hasChanges) return false;
-    const textAfter = txt.substring(lastIndex);
-    if (textAfter) fragment.appendChild(document.createTextNode(textAfter));
-    parent.replaceChild(fragment, textNode);
-    return true;
-}
-
-function maskElement(root) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
-    const nodesToProcess = [];
-    while(walker.nextNode()) nodesToProcess.push(walker.currentNode);
-    let changed = 0;
-    for (const node of nodesToProcess) {
-        if (maskTextNode(node)) changed++;
-        if (changed > 500) break;
-    }
-    return changed;
-}
-
-function unmaskAll() {
-    const maskedElements = document.querySelectorAll(`.${MASK_CLASS_NAME}`);
-    maskedElements.forEach(element => {
-        const originalIP = element.dataset.originalIp;
-        if (originalIP) {
-            element.replaceWith(document.createTextNode(originalIP));
+const Helpers = {
+    patternToRegex(pattern) { return new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`); },
+    isUrlWhitelisted(url, patterns = []) { return patterns.some(p => { try { return this.patternToRegex(p).test(url); } catch { return false; } }); },
+    buildIpRegex(maskLocal, customLocalPatterns) {
+        const octet = '(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])';
+        let ipPattern = `(?!0\\.0\\.0\\.0\\b)((${octet}\\.){3}${octet})`;
+        if (maskLocal && customLocalPatterns?.length > 0) {
+            const localRegexPart = customLocalPatterns.map(p => p.replace(/\./g, '\\.').replace(/\*/g, octet)).join('|');
+            ipPattern = `(?!0\\.0\\.0\\.0\\b)((${octet}\\.){3}${octet}|${localRegexPart})`;
         }
-    });
-}
+        return new RegExp(`\\b${ipPattern}(:[0-9]{1,5})?\\b`, 'g');
+    },
+    updateBadgeCount() { chrome.runtime.sendMessage({ type: "updateStats", count: AppState.stats.maskedCount }).catch(() => {}); }
+};
 
-const observer = new MutationObserver((mutations) => {
-    if (!window.ipMaskerEnabled) return;
-    observer.disconnect();
-    for (const mutation of mutations) {
-        if (mutation.type === "characterData") {
-            maskTextNode(mutation.target);
-        } else if (mutation.type === "childList") {
-            for (const node of mutation.addedNodes) {
-                if (node.nodeType === Node.TEXT_NODE) maskTextNode(node);
-                else if (node.nodeType === Node.ELEMENT_NODE && !node.classList.contains(MASK_CLASS_NAME)) {
-                    maskElement(node);
-                }
+const MaskingEngine = {
+    createBadge(originalIp) {
+        const badge = document.createElement('span');
+        badge.className = CSS_CLASSES.BADGE;
+        badge.style.cssText = BADGE_STYLES;
+        badge.dataset.originalIp = originalIp;
+        badge.innerHTML = `${ICONS.SHIELD}<span>${AppState.UI_TEXT.MASKED}</span>`;
+        badge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const textSpan = badge.querySelector('span');
+            if (badge.classList.toggle(CSS_CLASSES.REVEALED)) {
+                textSpan.textContent = badge.dataset.originalIp;
+                badge.style.backgroundColor = '#fffbe6'; badge.style.borderColor = '#ffe58f';
+            } else {
+                textSpan.textContent = AppState.UI_TEXT.MASKED;
+                badge.style.backgroundColor = '#e9ecef'; badge.style.borderColor = '#ced4da';
             }
+        });
+        return badge;
+    },
+    processTextNode(textNode, ipRegex) {
+        const parent = textNode.parentNode;
+        if (!parent || ['STYLE', 'SCRIPT', 'TEXTAREA', 'HEAD', 'NOSCRIPT', 'CODE', 'PRE'].includes(parent.tagName) || parent.isContentEditable || parent.closest(`.${CSS_CLASSES.BADGE}`)) return false;
+        const textContent = textNode.nodeValue;
+        ipRegex.lastIndex = 0; if (!ipRegex.test(textContent)) return false;
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0, match, hasReplacements = false;
+        ipRegex.lastIndex = 0;
+        while ((match = ipRegex.exec(textContent)) !== null) {
+            hasReplacements = true;
+            const textBefore = textContent.substring(lastIndex, match.index);
+            if (textBefore) fragment.appendChild(document.createTextNode(textBefore));
+            fragment.appendChild(this.createBadge(match[0]));
+            AppState.stats.maskedCount++;
+            lastIndex = ipRegex.lastIndex;
         }
+        if (!hasReplacements) return false;
+        const textAfter = textContent.substring(lastIndex);
+        if (textAfter) fragment.appendChild(document.createTextNode(textAfter));
+        parent.replaceChild(fragment, textNode);
+        return true;
+    },
+    processElement(root, ipRegex) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        for (const node of nodes) this.processTextNode(node, ipRegex);
+    },
+    revertAll() {
+        document.querySelectorAll(`.${CSS_CLASSES.BADGE}`).forEach(b => b.replaceWith(document.createTextNode(b.dataset.originalIp)));
+        AppState.stats.maskedCount = 0;
+    },
+    run() {
+        this.revertAll();
+        AppState.isWhitelisted = Helpers.isUrlWhitelisted(window.location.href, AppState.config.whitelist);
+        if (AppState.config.enabled && !AppState.isWhitelisted) {
+            const regex = Helpers.buildIpRegex(AppState.config.maskLocal, AppState.config.localIpPatterns);
+            this.processElement(document.body, regex);
+        }
+        Helpers.updateBadgeCount();
     }
-    startObserving();
+};
+
+const DomObserver = new MutationObserver((mutations) => {
+    if (!AppState.config.enabled || AppState.isWhitelisted) return;
+    const regex = Helpers.buildIpRegex(AppState.config.maskLocal, AppState.config.localIpPatterns);
+    let hasChanges = false;
+    DomObserver.disconnect();
+    for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) { if (MaskingEngine.processTextNode(node, regex)) hasChanges = true; } 
+                else if (node.nodeType === Node.ELEMENT_NODE) { MaskingEngine.processElement(node, regex); hasChanges = true; }
+            });
+        } else if (mutation.type === 'characterData') { if (MaskingEngine.processTextNode(mutation.target, regex)) hasChanges = true; }
+    }
+    startWatching();
+    if (hasChanges) Helpers.updateBadgeCount();
 });
 
-function startObserving() {
-    try {
-        observer.observe(document.documentElement || document.body, { childList: true, subtree: true, characterData: true });
-    } catch (e) {}
+function startWatching() {
+    if (AppState.isWhitelisted) return;
+    try { DomObserver.observe(document.documentElement, { childList: true, subtree: true, characterData: true }); } catch (e) {}
 }
 
-chrome.runtime.onMessage.addListener((msg) => {
-    if (msg && msg.type === "toggle") {
-        window.ipMaskerEnabled = !!msg.enabled;
-        if (window.ipMaskerEnabled) {
-            maskElement(document.body);
-        } else {
-            unmaskAll();
-        }
-    }
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-    chrome.storage.sync.get("enabled", (data) => {
-        window.ipMaskerEnabled = data.enabled ?? true;
-        if (window.ipMaskerEnabled) {
-            maskElement(document.body);
-        }
-        
-        requestAnimationFrame(() => {
-            style.remove();
-        });
-
-        startObserving();
+function loadConfigAndRun() {
+    chrome.storage.sync.get(["enabled", "maskLocal", "whitelist", "localIpPatterns", "language"], (data) => {
+        AppState.config = { ...AppState.config, ...data };
+        const lang = AppState.config.language || 'pl';
+        AppState.UI_TEXT.MASKED = locales[lang].maskedIpBadge || locales.en.maskedIpBadge;
+        MaskingEngine.run();
+        if (antiFlickerStyle.parentNode) requestAnimationFrame(() => antiFlickerStyle.remove());
+        startWatching();
     });
+}
+
+chrome.runtime.onMessage.addListener(msg => {
+    if (msg.type === "configUpdated") loadConfigAndRun();
+    else if (msg.type === "requestStats") Helpers.updateBadgeCount();
 });
+
+window.addEventListener('DOMContentLoaded', loadConfigAndRun);

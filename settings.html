@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>IP Masker - Ustawienia</title>
+<meta charset="utf-8">
+<style>
+:root {
+    --bg-body: #2d2d2d; --bg-panel: #3c3c3c; --bg-input: #222; --border: #555;
+    --text-main: #e0e0e0; --text-dim: #a0a0a0; --accent: #4a90e2; --accent-hover: #5aa1f2; --success: #73c990;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; }
+.layout { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+.header { background-color: var(--bg-panel); padding: 20px 30px; border-bottom: 1px solid var(--border); border-radius: 8px 8px 0 0; display: flex; align-items: center; }
+.header svg { color: var(--accent); margin-right: 12px; }
+.header h1 { font-size: 22px; font-weight: 600; margin: 0; }
+.panel { background-color: var(--bg-body); padding: 30px; border: 1px solid var(--bg-panel); border-top: none; border-radius: 0 0 8px 8px; }
+.card { margin-bottom: 35px; }
+.card h2 { font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); margin: 0 0 10px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.card p { font-size: 13px; color: var(--text-dim); margin: 0 0 15px 0; line-height: 1.5; }
+textarea { width: 100%; box-sizing: border-box; height: 180px; padding: 12px; font-size: 13px; font-family: 'Menlo', 'Consolas', monospace; background-color: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); border-radius: 4px; resize: vertical; }
+textarea:focus { outline: none; border-color: var(--accent); }
+.actions { display: flex; align-items: center; margin-top: 20px; }
+button { padding: 10px 24px; font-size: 14px; font-weight: 600; color: #fff; background-color: var(--accent); border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+button:hover { background-color: var(--accent-hover); }
+#statusMsg { margin-left: 20px; font-size: 14px; color: var(--success); opacity: 0; transition: opacity 0.3s; }
+#statusMsg.visible { opacity: 1; }
+/* Language Switcher */
+.lang-switcher button { background-color: var(--bg-panel); border: 1px solid var(--border); padding: 8px 16px; margin-right: 10px; }
+.lang-switcher button.active { background-color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="layout">
+    <header class="header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"></path></svg>
+        <h1 data-i18n="settingsTitle">Ustawienia IP Masker</h1>
+    </header>
+    <main class="panel">
+        <section class="card">
+            <h2 data-i18n="languageTitle">Język</h2>
+            <div class="lang-switcher">
+                <button id="lang-pl" data-lang="pl">Polski</button>
+                <button id="lang-en" data-lang="en">English</button>
+            </div>
+        </section>
+        <section class="card">
+            <h2 data-i18n="whitelistTitle">Biała lista (Wykluczenia)</h2>
+            <p data-i18n="whitelistDescription">Strony pasujące do tych wzorców nie będą maskowane...</p>
+            <textarea id="inputWhitelist" placeholder="https://*.zaufana-strona.pl/*"></textarea>
+        </section>
+        <section class="card">
+            <h2 data-i18n="localIpTitle">Definicje Lokalnych IP</h2>
+            <p data-i18n="localIpDescription">Jeśli opcja "Maskuj lokalne IP" jest włączona...</p>
+            <textarea id="inputLocalPatterns"></textarea>
+        </section>
+        <div class="actions">
+            <button id="btnSave" data-i18n="saveButton">Zapisz zmiany</button>
+            <span id="statusMsg" data-i18n="saveStatus">Ustawienia zapisane pomyślnie!</span>
+        </div>
+    </main>
+</div>
+<script src="locales.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>

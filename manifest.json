@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "IP Masker",
-  "version": "1.2",
-  "description": "Zamazuje wszystkie adresy IP na stronach.",
+  "version": "2.1",
+  "description": "Zaawansowane narzędzie do maskowania adresów IP na stronach internetowych.",
   "permissions": ["storage"],
   "action": {
     "default_popup": "popup.html"
@@ -10,8 +10,9 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["locales.js", "content.js"],
       "run_at": "document_start"
     }
-  ]
+  ],
+  "options_page": "settings.html"
 }
