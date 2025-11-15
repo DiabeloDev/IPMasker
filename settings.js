@@ -53,7 +53,6 @@ UI.langButtons.forEach(button => {
         if (selectedLang && selectedLang !== currentLang) {
             currentLang = selectedLang;
             translatePage(selectedLang);
-            // Zapisujemy język natychmiast po zmianie
             chrome.storage.sync.set({ language: currentLang });
         }
     });

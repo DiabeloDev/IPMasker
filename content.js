@@ -6,7 +6,7 @@ const AppState = {
     config: { enabled: true, maskLocal: true, whitelist: [], localIpPatterns: [], language: 'pl' },
     isWhitelisted: false,
     stats: { maskedCount: 0 },
-    UI_TEXT: { MASKED: "Zamaskowane IP" } // Domyślny tekst
+    UI_TEXT: { MASKED: "Zamaskowane IP" }
 };
 
 const antiFlickerStyle = document.createElement('style');
