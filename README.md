@@ -26,4 +26,4 @@ As this extension is not yet on an official web store, you can load it manually:
 ## How to Use
 
 -   **From the Popup**: Click the IP Masker icon in your toolbar to access the main toggles. You can quickly enable or disable the extension from here.
--   **From the Settings Page**: Click the "Settings & Whitelist" button in the popup to open the full settings page. Here you can manage your whitelist and custom IP rules.
+-   **From the Settings Page**: Click the "Settings" button in the popup to open the full settings page. Here you can manage your whitelist and custom IP rules.
