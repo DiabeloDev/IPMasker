@@ -16,7 +16,11 @@ function translatePopup(lang) {
 function notifyContentScript(messageType) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]?.id) {
-            chrome.tabs.sendMessage(tabs[0].id, { type: messageType }).catch(() => {});
+            chrome.tabs.sendMessage(tabs[0].id, { type: messageType }, (response) => {
+                if (chrome.runtime.lastError) {
+
+                }
+            });
         }
     });
 }

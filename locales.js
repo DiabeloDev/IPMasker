@@ -4,7 +4,7 @@ const locales = {
         maskedLabel: "Zamaskowano:",
         activeLabel: "Aktywne",
         maskLocalLabel: "Maskuj lokalne IP",
-        settingsButton: "Ustawienia & Biała Lista",
+        settingsButton: "Ustawienia",
         // Settings Page
         settingsTitle: "Ustawienia IP Masker",
         whitelistTitle: "Biała lista (Wykluczenia)",
@@ -22,7 +22,7 @@ const locales = {
         maskedLabel: "Masked:",
         activeLabel: "Active",
         maskLocalLabel: "Mask local IPs",
-        settingsButton: "Settings & Whitelist",
+        settingsButton: "Settings",
         // Settings Page
         settingsTitle: "IP Masker Settings",
         whitelistTitle: "Whitelist (Exclusions)",
